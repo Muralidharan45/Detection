@@ -1,0 +1,112 @@
+[
+    {
+        "id": "mqtt_input",
+        "type": "mqtt in",
+        "z": "flow_1",
+        "name": "MQTT Input",
+        "topic": "drowsiness/data",
+        "qos": "2",
+        "broker": "mqtt_broker",
+        "x": 120,
+        "y": 100,
+        "wires": [["parse_json"]]
+    },
+    {
+        "id": "parse_json",
+        "type": "json",
+        "z": "flow_1",
+        "name": "Parse JSON",
+        "property": "payload",
+        "x": 300,
+        "y": 100,
+        "wires": [["store_data", "debug_output"]]
+    },
+    {
+        "id": "debug_output",
+        "type": "debug",
+        "z": "flow_1",
+        "name": "Debug Output",
+        "active": true,
+        "console": "false",
+        "x": 500,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "store_data",
+        "type": "function",
+        "z": "flow_1",
+        "name": "Store Data",
+        "func": "const context = global.get('drowsy_data') || {};\ncontext.driver_status = msg.payload.driver_status || 'unknown';\ncontext.led_status = msg.payload.led_status || 'off';\ncontext.timestamp = new Date().toISOString();\nglobal.set('drowsy_data', context);\nmsg.payload = { success: true, message: \"Data Stored Successfully\" };\nreturn msg;",
+        "x": 500,
+        "y": 140,
+        "wires": [["driver_status", "led_status", "timestamp", "retrieve_data"]]
+    },
+    {
+        "id": "driver_status",
+        "type": "ui_text",
+        "z": "flow_1",
+        "name": "Driver Status",
+        "x": 700,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "led_status",
+        "type": "ui_text",
+        "z": "flow_1",
+        "name": "LED Status",
+        "x": 700,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "timestamp",
+        "type": "ui_text",
+        "z": "flow_1",
+        "name": "Timestamp",
+        "x": 700,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "http_dashboard",
+        "type": "http in",
+        "z": "flow_1",
+        "name": "HTTP Dashboard Data",
+        "url": "/dashboard/data",
+        "method": "GET",
+        "x": 150,
+        "y": 300,
+        "wires": [["retrieve_data"]]
+    },
+    {
+        "id": "retrieve_data",
+        "type": "function",
+        "z": "flow_1",
+        "name": "Retrieve Data",
+        "func": "const context = global.get('drowsy_data') || {};\nif (!context.driver_status) {\n    msg.payload = { error: true, message: \"No Object Response\" };\n} else {\n    msg.payload = context;\n}\nreturn msg;",
+        "x": 350,
+        "y": 300,
+        "wires": [["send_dashboard", "websocket_dashboard"]]
+    },
+    {
+        "id": "send_dashboard",
+        "type": "http response",
+        "z": "flow_1",
+        "name": "Send Dashboard Data",
+        "x": 550,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "websocket_dashboard",
+        "type": "websocket out",
+        "z": "flow_1",
+        "name": "WebSocket Dashboard",
+        "server": "ws_dashboard",
+        "x": 550,
+        "y": 360,
+        "wires": []
+    }
+]
