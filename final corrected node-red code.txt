@@ -1,114 +1,246 @@
 [
     {
-        "id": "mqtt_input",
+        "id": "eb6d75d5b834dab5",
+        "type": "tab",
+        "label": "Flow 10",
+        "disabled": true,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "d1178c259b45b535",
         "type": "mqtt in",
-        "z": "flow_id",
+        "z": "eb6d75d5b834dab5",
+        "d": true,
         "name": "MQTT Input",
-        "topic": "drowsy/alert",
-        "qos": "2",
-        "broker": "mqtt_broker_id",
-        "x": 100,
-        "y": 100,
-        "wires": [["parse_json"]]
+        "topic": "drowsiness/data",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "3f5a0d1dfac8b6a2",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 210,
+        "y": 200,
+        "wires": [
+            [
+                "1765a9779325b96e"
+            ]
+        ]
     },
     {
-        "id": "parse_json",
+        "id": "1765a9779325b96e",
         "type": "json",
-        "z": "flow_id",
+        "z": "eb6d75d5b834dab5",
         "name": "Parse JSON",
-        "x": 250,
-        "y": 100,
-        "wires": [["store_data", "debug_output"]]
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 390,
+        "y": 200,
+        "wires": [
+            [
+                "77d0d75166a9de91",
+                "11784d66a3998a11"
+            ]
+        ]
     },
     {
-        "id": "debug_output",
+        "id": "11784d66a3998a11",
         "type": "debug",
-        "z": "flow_id",
+        "z": "eb6d75d5b834dab5",
         "name": "Debug Output",
         "active": true,
-        "x": 450,
-        "y": 50,
+        "console": "false",
+        "x": 590,
+        "y": 160,
         "wires": []
     },
     {
-        "id": "store_data",
+        "id": "77d0d75166a9de91",
         "type": "function",
-        "z": "flow_id",
+        "z": "eb6d75d5b834dab5",
         "name": "Store Data",
-        "func": "var data = msg.payload;\nif (data) {\n    global.set('drowsy_data', data);\n}\nreturn msg;",
-        "x": 400,
-        "y": 150,
-        "wires": [["driver_status", "led_status", "timestamp"]]
+        "func": "const context = global.get('drowsy_data') || {};\ncontext.driver_status = msg.payload.driver_status || 'unknown';\ncontext.led_status = msg.payload.led_status || 'off';\ncontext.timestamp = new Date().toISOString();\nglobal.set('drowsy_data', context);\nmsg.payload = { success: true, message: \"Data Stored Successfully\" };\nreturn msg;",
+        "outputs": 1,
+        "x": 590,
+        "y": 240,
+        "wires": [
+            [
+                "46968ba879facf04",
+                "3a675bd2466c1bb5",
+                "b2669ee4d11108b8",
+                "e9b25c8b856f85b0"
+            ]
+        ]
     },
     {
-        "id": "driver_status",
-        "type": "change",
-        "z": "flow_id",
+        "id": "46968ba879facf04",
+        "type": "ui_text",
+        "z": "eb6d75d5b834dab5",
+        "group": "b2c3d4e5.6f7a8",
+        "width": "",
+        "height": "",
         "name": "Driver Status",
-        "rules": [{"t": "set", "p": "payload", "to": "$.driver_status"}],
-        "x": 600,
-        "y": 100,
-        "wires": []
-    },
-    {
-        "id": "led_status",
-        "type": "change",
-        "z": "flow_id",
-        "name": "LED Status",
-        "rules": [{"t": "set", "p": "payload", "to": "$.led_status"}],
-        "x": 600,
-        "y": 150,
-        "wires": []
-    },
-    {
-        "id": "timestamp",
-        "type": "change",
-        "z": "flow_id",
-        "name": "Timestamp",
-        "rules": [{"t": "set", "p": "payload", "to": "$.timestamp"}],
-        "x": 600,
+        "label": "",
+        "format": "",
+        "layout": "",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 790,
         "y": 200,
         "wires": []
     },
     {
-        "id": "http_dashboard_data",
+        "id": "3a675bd2466c1bb5",
+        "type": "ui_text",
+        "z": "eb6d75d5b834dab5",
+        "group": "b2c3d4e5.6f7a8",
+        "width": "",
+        "height": "",
+        "name": "LED Status",
+        "label": "",
+        "format": "",
+        "layout": "",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 790,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "b2669ee4d11108b8",
+        "type": "ui_text",
+        "z": "eb6d75d5b834dab5",
+        "group": "b2c3d4e5.6f7a8",
+        "width": "",
+        "height": "",
+        "name": "Timestamp",
+        "label": "",
+        "format": "",
+        "layout": "",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 790,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "6eeaab85a3cad76a",
         "type": "http in",
-        "z": "flow_id",
+        "z": "eb6d75d5b834dab5",
         "name": "HTTP Dashboard Data",
-        "url": "/dashboard",
+        "url": "/dashboard/data",
         "method": "get",
-        "x": 100,
-        "y": 300,
-        "wires": [["retrieve_data"]]
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 240,
+        "y": 400,
+        "wires": [
+            [
+                "e9b25c8b856f85b0"
+            ]
+        ]
     },
     {
-        "id": "retrieve_data",
+        "id": "e9b25c8b856f85b0",
         "type": "function",
-        "z": "flow_id",
+        "z": "eb6d75d5b834dab5",
         "name": "Retrieve Data",
-        "func": "var data = global.get('drowsy_data') || {};\nif (Object.keys(data).length === 0) {\n    msg.payload = { error: \"No object response\" };\n} else {\n    msg.payload = data;\n}\nreturn msg;",
-        "x": 250,
-        "y": 300,
-        "wires": [["send_dashboard_data"]]
+        "func": "const context = global.get('drowsy_data', data) || {};\nif (!context.driver_status) {\n    msg.payload = { error: true, message: \"No Object Response\" };\n} else {\n    msg.payload = context;\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 2,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 400,
+        "wires": [
+            [
+                "b0ebefa5c81ad707",
+                "a9e4445d97c6f931"
+            ]
+        ]
     },
     {
-        "id": "send_dashboard_data",
+        "id": "b0ebefa5c81ad707",
         "type": "http response",
-        "z": "flow_id",
+        "z": "eb6d75d5b834dab5",
         "name": "Send Dashboard Data",
-        "statusCode": "200",
-        "x": 450,
-        "y": 300,
+        "statusCode": "",
+        "headers": {},
+        "x": 640,
+        "y": 400,
         "wires": []
     },
     {
-        "id": "websocket_dashboard",
+        "id": "a9e4445d97c6f931",
         "type": "websocket out",
-        "z": "flow_id",
+        "z": "eb6d75d5b834dab5",
         "name": "WebSocket Dashboard",
-        "server": "websocket_server_id",
-        "x": 450,
-        "y": 350,
+        "server": "ws_dashboard",
+        "x": 640,
+        "y": 460,
         "wires": []
+    },
+    {
+        "id": "3f5a0d1dfac8b6a2",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "127.0.0.1:1880",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "b2c3d4e5.6f7a8",
+        "type": "ui_group",
+        "name": "Driver Drowsiness Dashboard",
+        "tab": "a1b2c3d4.5e6f7",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "a1b2c3d4.5e6f7",
+        "type": "ui_tab",
+        "name": "Dashboard",
+        "icon": "dashboard",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
     }
 ]
