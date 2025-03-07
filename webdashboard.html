@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Drowsiness Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .dashboard {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            width: 300px;
+        }
+        .status {
+            font-size: 22px;
+            font-weight: bold;
+            color: #444;
+        }
+        .led {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        .timestamp {
+            font-size: 14px;
+            margin-top: 10px;
+            color: #666;
+        }
+        .active { color: green; }
+        .drowsy { color: orange; }
+        .sleeping { color: red; }
+    </style>
+</head>
+<body>
+
+    <h1>Driver Drowsiness Monitoring</h1>
+    
+    <div class="dashboard">
+        <p class="status">Driver Status: <span id="driverStatus">Waiting...</span></p>
+        <p class="led">LED Status: <span id="ledStatus">Waiting...</span></p>
+        <p class="timestamp">Timestamp: <span id="timestamp">Waiting...</span></p>
+    </div>
+
+    <script>
+        // Connect to WebSocket Server in Node-RED
+        const ws = new WebSocket("ws://172.16.5.109:1880/ws/dashboard");
+
+        ws.onopen = function() {
+            console.log("Connected to WebSocket Server");
+        };
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            console.log("Received Data:", data);
+
+            // Update the dashboard
+            document.getElementById("driverStatus").textContent = data.driver_status;
+            document.getElementById("ledStatus").textContent = data.led_status;
+            document.getElementById("timestamp").textContent = data.timestamp;
+
+            // Change text color based on status
+            let statusElement = document.getElementById("driverStatus");
+            statusElement.classList.remove("active", "drowsy", "sleeping");
+
+            if (data.driver_status === "Active") {
+                statusElement.classList.add("active");
+            } else if (data.driver_status === "Drowsy") {
+                statusElement.classList.add("drowsy");
+            } else if (data.driver_status === "Sleeping") {
+                statusElement.classList.add("sleeping");
+            }
+        };
+
+        ws.onerror = function(error) {
+            console.error("WebSocket Error:", error);
+        };
+
+        ws.onclose = function() {
+            console.warn("WebSocket Disconnected");
+        };
+    </script>
+
+</body>
+</html>
