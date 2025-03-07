@@ -1,1 +1,135 @@
-# Detection
+[
+    {
+        "id": "mqtt_input",
+        "type": "mqtt in",
+        "z": "flow_1",
+        "name": "MQTT Input",
+        "topic": "drowsiness/data",
+        "qos": "2",
+        "broker": "mqtt_broker",
+        "datatype": "auto",
+        "x": 120,
+        "y": 100,
+        "wires": [["parse_json"]]
+    },
+    {
+        "id": "parse_json",
+        "type": "json",
+        "z": "flow_1",
+        "name": "Parse JSON",
+        "property": "payload",
+        "action": "obj",
+        "x": 300,
+        "y": 100,
+        "wires": [["store_data", "debug_output"]]
+    },
+    {
+        "id": "debug_output",
+        "type": "debug",
+        "z": "flow_1",
+        "name": "Debug Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "x": 500,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "store_data",
+        "type": "function",
+        "z": "flow_1",
+        "name": "Store Data",
+        "func": "try {\n    let context = global.get('drowsy_data') || {};\n    context.driver_status = msg.payload.driver_status || 'unknown';\n    context.led_status = msg.payload.led_status || 'off';\n    context.timestamp = new Date().toISOString();\n    \n    // Save to global context\n    global.set('drowsy_data', context);\n    \n    // Send success response\n    msg.payload = { success: true, message: \"Data Stored Successfully\" };\n    return msg;\n} catch (error) {\n    node.error(\"Error storing data: \" + error.message, msg);\n    msg.payload = { error: true, message: \"Data storage error\", details: error.message };\n    return msg;\n}",
+        "x": 500,
+        "y": 140,
+        "wires": [["driver_status", "led_status", "timestamp", "retrieve_data"]]
+    },
+    {
+        "id": "driver_status",
+        "type": "ui_text",
+        "z": "flow_1",
+        "name": "Driver Status",
+        "label": "Driver Status",
+        "group": "ui_group",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "format": "{{msg.payload.driver_status}}",
+        "x": 700,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "led_status",
+        "type": "ui_text",
+        "z": "flow_1",
+        "name": "LED Status",
+        "label": "LED Status",
+        "group": "ui_group",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "format": "{{msg.payload.led_status}}",
+        "x": 700,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "timestamp",
+        "type": "ui_text",
+        "z": "flow_1",
+        "name": "Timestamp",
+        "label": "Timestamp",
+        "group": "ui_group",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "format": "{{msg.payload.timestamp}}",
+        "x": 700,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "http_dashboard",
+        "type": "http in",
+        "z": "flow_1",
+        "name": "HTTP Dashboard Data",
+        "url": "/dashboard/data",
+        "method": "GET",
+        "x": 150,
+        "y": 300,
+        "wires": [["retrieve_data"]]
+    },
+    {
+        "id": "retrieve_data",
+        "type": "function",
+        "z": "flow_1",
+        "name": "Retrieve Data",
+        "func": "try {\n    let context = global.get('drowsy_data') || {};\n    \n    if (!context.driver_status) {\n        msg.payload = { error: true, message: \"No Data Available\" };\n    } else {\n        msg.payload = context;\n    }\n    return msg;\n} catch (error) {\n    node.error(\"Error retrieving data: \" + error.message, msg);\n    msg.payload = { error: true, message: \"Data retrieval error\", details: error.message };\n    return msg;\n}",
+        "x": 350,
+        "y": 300,
+        "wires": [["send_dashboard", "websocket_dashboard"]]
+    },
+    {
+        "id": "send_dashboard",
+        "type": "http response",
+        "z": "flow_1",
+        "name": "Send Dashboard Data",
+        "statusCode": "200",
+        "headers": {},
+        "x": 550,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "websocket_dashboard",
+        "type": "websocket out",
+        "z": "flow_1",
+        "name": "WebSocket Dashboard",
+        "server": "ws_dashboard",
+        "x": 550,
+        "y": 360,
+        "wires": []
+    }
+]
