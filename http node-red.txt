@@ -1,117 +1,21 @@
-[
-    {
-        "id": "mqtt_input",
-        "type": "mqtt in",
-        "z": "flow7",
-        "name": "MQTT Input",
-        "topic": "driver/drowsiness",
-        "qos": "2",
-        "broker": "mqtt_broker",
-        "x": 150,
-        "y": 100,
-        "wires": [["parse_json"]]
-    },
-    {
-        "id": "parse_json",
-        "type": "json",
-        "z": "flow7",
-        "name": "Parse JSON",
-        "x": 350,
-        "y": 100,
-        "wires": [["debug_output", "driver_status", "led_status", "timestamp", "send_dashboard"]]
-    },
-    {
-        "id": "debug_output",
-        "type": "debug",
-        "z": "flow7",
-        "name": "Debug Output",
-        "active": true,
-        "tosidebar": true,
-        "x": 550,
-        "y": 100,
-        "wires": []
-    },
-    {
-        "id": "driver_status",
-        "type": "ui_text",
-        "z": "flow7",
-        "name": "Driver Status",
-        "label": "Driver Status",
-        "group": "dashboard",
-        "order": 1,
-        "format": "{{msg.payload.driver_status}}",
-        "x": 550,
-        "y": 160,
-        "wires": []
-    },
-    {
-        "id": "led_status",
-        "type": "ui_text",
-        "z": "flow7",
-        "name": "LED Status",
-        "label": "LED Status",
-        "group": "dashboard",
-        "order": 2,
-        "format": "{{msg.payload.led_status}}",
-        "x": 550,
-        "y": 220,
-        "wires": []
-    },
-    {
-        "id": "timestamp",
-        "type": "ui_text",
-        "z": "flow7",
-        "name": "Timestamp",
-        "label": "Timestamp",
-        "group": "dashboard",
-        "order": 3,
-        "format": "{{msg.payload.timestamp}}",
-        "x": 550,
-        "y": 280,
-        "wires": []
-    },
-    {
-        "id": "http_dashboard",
-        "type": "http in",
-        "z": "flow7",
-        "name": "HTTP Dashboard Data",
-        "url": "/dashboard/data",
-        "method": "get",
-        "swaggerDoc": "",
-        "x": 150,
-        "y": 400,
-        "wires": [["send_dashboard"]]
-    },
-    {
-        "id": "send_dashboard",
-        "type": "function",
-        "z": "flow7",
-        "name": "Send Dashboard Data",
-        "func": "msg.payload = {\n    driver_status: msg.payload.driver_status,\n    led_status: msg.payload.led_status,\n    timestamp: msg.payload.timestamp\n};\nreturn msg;",
-        "outputs": 1,
-        "x": 350,
-        "y": 400,
-        "wires": [["http_response", "websocket_dashboard"]]
-    },
-    {
-        "id": "http_response",
-        "type": "http response",
-        "z": "flow7",
-        "name": "HTTP Response",
-        "statusCode": "200",
-        "headers": {},
-        "x": 550,
-        "y": 400,
-        "wires": []
-    },
-    {
-        "id": "websocket_dashboard",
-        "type": "websocket out",
-        "z": "flow7",
-        "name": "WebSocket Dashboard",
-        "server": "ws://127.0.0.1:1880/ws/dashboard",
-        "x": 550,
-        "y": 460,
-        "wires": []
-    }
-]
+const context = global.get('drowsy_data') || {};
+let httpResponse = null;
+let webSocketResponse = null;
+
+if (!context.driver_status) {
+    msg.payload = { error: true, message: "No Data Available" };
+} else {
+    msg.payload = context;
+}
+
+// If this is an HTTP request, create a response
+if (msg.req && msg.res) {
+    httpResponse = { ...msg };  // Clone msg to avoid modifying the original
+    httpResponse.res = msg.res;  // Ensure res object is present for HTTP response
+}
+
+// Always send data to WebSocket
+webSocketResponse = { ...msg };
+
+// Return outputs: [HTTP Response, WebSocket Output, Debug Output]
+return [httpResponse, webSocketResponse, msg];
