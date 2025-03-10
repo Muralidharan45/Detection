@@ -101,15 +101,23 @@ def rotate_image(image, angle):
     rotated = cv2.warpAffine(image, M, (w, h))
     return rotated
 
+def get_face_angle(landmarks):
+    """Calculate the angle of the face based on eye landmarks."""
+    # Get the left and right eye landmarks
+    left_eye = landmarks[36]  # Left eye corner
+    right_eye = landmarks[45]  # Right eye corner
+
+    # Calculate the angle between the eyes
+    dy = right_eye[1] - left_eye[1]
+    dx = right_eye[0] - left_eye[0]
+    angle = np.degrees(np.arctan2(dy, dx))  # Angle in degrees
+
+    return angle
+
 # Main loop with graceful exit
 try:
     while True:
         _, frame = cap.read()
-        
-        # Rotate the frame by a specified angle (e.g., 45 degrees)
-        angle = 45  # Change this value to the desired angle
-        frame = rotate_image(frame, angle)
-        
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = hog_face_detector(gray)
 
@@ -120,43 +128,56 @@ try:
             landmarks = predictor(gray, face)
             landmarks = face_utils.shape_to_np(landmarks)
 
-            left_blink = blinked(landmarks[36], landmarks[37], landmarks[38], landmarks[41], landmarks[40], landmarks[39])
-            right_blink = blinked(landmarks[42], landmarks[43], landmarks[44], landmarks[47], landmarks[46], landmarks[45])
+            # Calculate the face angle
+            face_angle = get_face_angle(landmarks)
 
-            if left_blink == 0 or right_blink == 0:
-                sleep += 1
-                drowsy = 0
-                active = 0
-                if sleep > 6:
-                    status = "SLEEPING !!!"
-                    color = (0, 0, 255)
-                    led_state = led_on()
-                    publish_status(status, led_state)
+            # Rotate the frame to align the face upright
+            frame = rotate_image(frame, -face_angle)  # Negative angle to correct the tilt
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Update grayscale image
 
-            elif left_blink == 1 or right_blink == 1:
-                sleep = 0
-                active = 0
-                drowsy += 1
-                if drowsy > 6:
-                    status = "DROWSY !"
-                    color = (0, 0, 255)
-                    led_state = led_on()
-                    publish_status(status, led_state)
+            # Re-detect faces in the rotated frame
+            faces_rotated = hog_face_detector(gray)
+            for face_rotated in faces_rotated:
+                landmarks_rotated = predictor(gray, face_rotated)
+                landmarks_rotated = face_utils.shape_to_np(landmarks_rotated)
 
-            else:
-                sleep = 0
-                drowsy = 0
-                active += 1
-                if active > 6:
-                    status = "ACTIVE :)"
-                    color = (0, 255, 0)
-                    led_state = led_off()
-                    publish_status(status, led_state)
+                left_blink = blinked(landmarks_rotated[36], landmarks_rotated[37], landmarks_rotated[38], landmarks_rotated[41], landmarks_rotated[40], landmarks_rotated[39])
+                right_blink = blinked(landmarks_rotated[42], landmarks_rotated[43], landmarks_rotated[44], landmarks_rotated[47], landmarks_rotated[46], landmarks_rotated[45])
 
-            cv2.putText(frame, status, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-            for n in range(0, 68):
-                (x, y) = landmarks[n]
-                cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
+                if left_blink == 0 or right_blink == 0:
+                    sleep += 1
+                    drowsy = 0
+                    active = 0
+                    if sleep > 6:
+                        status = "SLEEPING !!!"
+                        color = (0, 0, 255)
+                        led_state = led_on()
+                        publish_status(status, led_state)
+
+                elif left_blink == 1 or right_blink == 1:
+                    sleep = 0
+                    active = 0
+                    drowsy += 1
+                    if drowsy > 6:
+                        status = "DROWSY !"
+                        color = (0, 0, 255)
+                        led_state = led_on()
+                        publish_status(status, led_state)
+
+                else:
+                    sleep = 0
+                    drowsy = 0
+                    active += 1
+                    if active > 6:
+                        status = "ACTIVE :)"
+                        color = (0, 255, 0)
+                        led_state = led_off()
+                        publish_status(status, led_state)
+
+                cv2.putText(frame, status, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+                for n in range(0, 68):
+                    (x, y) = landmarks_rotated[n]
+                    cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
 
         cv2.imshow("Driver Drowsiness Detection", frame)
 
