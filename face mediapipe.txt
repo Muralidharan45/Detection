@@ -68,11 +68,12 @@ def publish_status(status, led_state):
 connect_mqtt()
 
 # State variables
-sleep_counter = 0
-drowsy_counter = 0
-active_counter = 0
+sleep = 0
+drowsy = 0
+active = 0
 status = ""
-color = (0, 255, 0)
+color = (0, 0, 0)
+led_state = "OFF"  # Initialize LED state
 
 def led_on():
     """Turn the LED on."""
@@ -126,7 +127,7 @@ try:
                 if face_results.multi_face_landmarks:
                     for face_landmarks in face_results.multi_face_landmarks:
                         landmarks = [(int(lm.x * w), int(lm.y * h)) for lm in face_landmarks.landmark]
-
+                        
                         # Get eye landmarks
                         left_eye = [landmarks[i] for i in LEFT_EYE_INDICES]
                         right_eye = [landmarks[i] for i in RIGHT_EYE_INDICES]
@@ -136,33 +137,35 @@ try:
                         avg_ear = (left_ear + right_ear) / 2.0
 
                         # Detect drowsiness state
-                        if avg_ear < 0.20:  # Eyes closed (Sleeping)
-                            sleep_counter += 1
-                            drowsy_counter = 0
-                            active_counter = 0
-                            if sleep_counter > 6:
+                        if avg_ear < 0.20:  # Eyes closed
+                            sleep += 1
+                            drowsy = 0
+                            active = 0
+                            if sleep > 6:
                                 status = "SLEEPING !!!"
                                 color = (0, 0, 255)
                                 led_state = led_on()
+                                publish_status(status, led_state)
+
                         elif 0.20 <= avg_ear < 0.25:  # Drowsy
-                            sleep_counter = 0
-                            drowsy_counter += 1
-                            active_counter = 0
-                            if drowsy_counter > 6:
+                            sleep = 0
+                            active = 0
+                            drowsy += 1
+                            if drowsy > 6:
                                 status = "DROWSY !"
-                                color = (0, 165, 255)
+                                color = (0, 0, 255)
                                 led_state = led_on()
-                        else:  # Active (Eyes Open)
-                            sleep_counter = 0
-                            drowsy_counter = 0
-                            active_counter += 1
-                            if active_counter > 6:
+                                publish_status(status, led_state)
+
+                        else:  # Eyes open
+                            sleep = 0
+                            drowsy = 0
+                            active += 1
+                            if active > 6:
                                 status = "ACTIVE :)"
                                 color = (0, 255, 0)
                                 led_state = led_off()
-                        
-                        # Publish only when state changes
-                        publish_status(status, led_state)
+                                publish_status(status, led_state)
 
                         # Display status text
                         cv2.putText(frame, status, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
