@@ -95,84 +95,60 @@ def control_alerts(state):
         GPIO.output(VIBRATION_PIN, GPIO.LOW)
         return "OFF", "OFF", "OFF"
 
-def rotate_image(image, angle):
-    """Rotate the image by the specified angle."""
-    (h, w) = image.shape[:2]
-    center = (w // 2, h // 2)
-    M = cv2.getRotationMatrix2D(center, angle, 1.0)
-    rotated = cv2.warpAffine(image, M, (w, h))
-    return rotated
-
-def get_face_angle(landmarks):
-    """Calculate the angle of the face based on eye landmarks."""
-    left_eye = landmarks[36]  # Left eye corner
-    right_eye = landmarks[45]  # Right eye corner
-    dy = right_eye[1] - left_eye[1]
-    dx = right_eye[0] - left_eye[0]
-    angle = np.degrees(np.arctan2(dy, dx))  # Angle in degrees
-    return angle
-
 try:
     while True:
         _, frame = cap.read()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = hog_face_detector(gray)
 
-        # **Initialize status before using it**
         status = "UNKNOWN"
 
         for face in faces:
             landmarks = predictor(gray, face)
             landmarks = face_utils.shape_to_np(landmarks)
 
-            # Calculate face angle
-            face_angle = get_face_angle(landmarks)
+            # **Draw bounding box around face**
+            x, y, w, h = face.left(), face.top(), face.width(), face.height()
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-            # Rotate the frame to align the face upright
-            frame = rotate_image(frame, -face_angle)  # Negative angle to correct the tilt
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Update grayscale image
+            # **Draw facial landmarks**
+            for (x, y) in landmarks:
+                cv2.circle(frame, (x, y), 1, (255, 0, 0), -1)
 
-            # Re-detect faces in the rotated frame
-            faces_rotated = hog_face_detector(gray)
-            for face_rotated in faces_rotated:
-                landmarks_rotated = predictor(gray, face_rotated)
-                landmarks_rotated = face_utils.shape_to_np(landmarks_rotated)
+            left_blink = blinked(*landmarks[36:42])
+            right_blink = blinked(*landmarks[42:48])
 
-                left_blink = blinked(*landmarks_rotated[36:42])
-                right_blink = blinked(*landmarks_rotated[42:48])
+            if left_blink == 0 or right_blink == 0:
+                sleep += 1
+                drowsy = 0
+                active = 0
+                if sleep > 5:  # Reduce the threshold for better response
+                    status = "SLEEPING !!!"
+                    led_state, buzzer_state, vibration_state = control_alerts(status)
+                    publish_status(status, led_state, buzzer_state, vibration_state)
+                    lcd_display(status)
+            elif left_blink == 1 or right_blink == 1:
+                sleep = 0
+                active = 0
+                drowsy += 1
+                if drowsy > 5:  # Adjust threshold for drowsiness detection
+                    status = "DROWSY !"
+                    led_state, buzzer_state, vibration_state = control_alerts(status)
+                    publish_status(status, led_state, buzzer_state, vibration_state)
+                    lcd_display(status)
+            else:
+                sleep = 0
+                drowsy = 0
+                active += 1
+                if active > 5:  # Ensure it detects active state only if truly awake
+                    status = "ACTIVE :)"
+                    led_state, buzzer_state, vibration_state = control_alerts(status)
+                    publish_status(status, led_state, buzzer_state, vibration_state)
+                    lcd_display(status)
 
-                if left_blink == 0 or right_blink == 0:
-                    sleep += 1
-                    drowsy = 0
-                    active = 0
-                    if sleep > 6:
-                        status = "SLEEPING !!!"
-                        led_state, buzzer_state, vibration_state = control_alerts(status)
-                        publish_status(status, led_state, buzzer_state, vibration_state)
-                        lcd_display(status)
-                elif left_blink == 1 or right_blink == 1:
-                    sleep = 0
-                    active = 0
-                    drowsy += 1
-                    if drowsy > 6:
-                        status = "DROWSY !"
-                        led_state, buzzer_state, vibration_state = control_alerts(status)
-                        publish_status(status, led_state, buzzer_state, vibration_state)
-                        lcd_display(status)
-                else:
-                    sleep = 0
-                    drowsy = 0
-                    active += 1
-                    if active > 6:
-                        status = "ACTIVE :)"
-                        led_state, buzzer_state, vibration_state = control_alerts(status)
-                        publish_status(status, led_state, buzzer_state, vibration_state)
-                        lcd_display(status)
-
-        # **Use status after ensuring it's defined**
         cv2.putText(frame, status, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
         cv2.imshow("Drowsiness Detection", frame)
+
         if cv2.waitKey(1) == 27:
             break
 
