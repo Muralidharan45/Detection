@@ -1,16 +1,17 @@
 [
     {
-        "id": "0e8ca933418e253a",
+        "id": "70fa28a94f45b4d3",
         "type": "tab",
-        "label": "Flow 13",
+        "label": "Flow 5",
         "disabled": false,
         "info": "",
         "env": []
     },
     {
-        "id": "907779231aaf4cf0",
+        "id": "d1a6f2e1.6b3b7",
         "type": "mqtt in",
-        "z": "0e8ca933418e253a",
+        "z": "70fa28a94f45b4d3",
+        "d": true,
         "name": "MQTT Input",
         "topic": "status",
         "qos": "0",
@@ -19,191 +20,89 @@
         "nl": false,
         "rap": false,
         "inputs": 0,
-        "x": 210,
-        "y": 140,
+        "x": 170,
+        "y": 180,
         "wires": [
             [
-                "5490fd01fb1ccfd5"
+                "3b8a6d5f.8e9c2"
             ]
         ]
     },
     {
-        "id": "5490fd01fb1ccfd5",
+        "id": "3b8a6d5f.8e9c2",
         "type": "json",
-        "z": "0e8ca933418e253a",
+        "z": "70fa28a94f45b4d3",
         "name": "Parse JSON",
         "property": "payload",
         "action": "obj",
-        "pretty": false,
-        "x": 390,
-        "y": 140,
+        "x": 360,
+        "y": 180,
         "wires": [
             [
-                "02411dac20db05b6",
-                "c7b86efb66907085"
+                "82d3e94c.6a1f2",
+                "a5d7e2b4.6c3a8",
+                "c7d9e1a3.4f5b6",
+                "e8f1a2b3.4c5d6"
             ]
         ]
     },
     {
-        "id": "c7b86efb66907085",
+        "id": "82d3e94c.6a1f2",
         "type": "debug",
-        "z": "0e8ca933418e253a",
+        "z": "70fa28a94f45b4d3",
         "name": "Debug Output",
         "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
         "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 590,
-        "y": 100,
+        "x": 550,
+        "y": 180,
         "wires": []
     },
     {
-        "id": "02411dac20db05b6",
-        "type": "function",
-        "z": "0e8ca933418e253a",
-        "name": "Store Data",
-        "func": "let context = global.get('drowsy_data') || {};\nif (typeof msg.payload === 'object' && msg.payload !== null) {\n    context.driver_status = msg.payload.driver_status || 'unknown';\n    context.led_status = msg.payload.led_status || 'off';\n    context.timestamp = new Date().toISOString();\n    global.set('drowsy_data', context);\n    msg.payload = { success: true, message: \"Data Stored Successfully\", data: context };\n} else {\n    msg.payload = { error: true, message: \"Invalid JSON Format\" };\n}\nreturn msg;",
-        "outputs": 1,
-        "timeout": "",
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 590,
-        "y": 180,
-        "wires": [
-            [
-                "c7b86efb66907085",
-                "3167973aec32b01b",
-                "d0da582378340af9",
-                "39e4615007023246",
-                "15d9210bac411f39"
-            ]
-        ]
-    },
-    {
-        "id": "3167973aec32b01b",
+        "id": "a5d7e2b4.6c3a8",
         "type": "ui_text",
-        "z": "0e8ca933418e253a",
-        "group": "dashboard-group",
-        "width": "",
-        "height": "",
+        "z": "70fa28a94f45b4d3",
+        "group": "b2c3d4e5.6f7a8",
+        "order": 1,
+        "width": 6,
+        "height": 1,
         "name": "Driver Status",
         "label": "Driver Status",
-        "format": "",
-        "layout": "",
-        "className": "",
-        "style": false,
-        "font": "",
-        "fontSize": "",
-        "color": "#000000",
-        "x": 790,
-        "y": 140,
+        "format": "{{msg.payload.status}}",
+        "x": 360,
+        "y": 260,
         "wires": []
     },
     {
-        "id": "d0da582378340af9",
+        "id": "c7d9e1a3.4f5b6",
         "type": "ui_text",
-        "z": "0e8ca933418e253a",
-        "group": "dashboard-group",
-        "width": "",
-        "height": "",
+        "z": "70fa28a94f45b4d3",
+        "group": "b2c3d4e5.6f7a8",
+        "order": 2,
+        "width": 6,
+        "height": 1,
         "name": "LED Status",
         "label": "LED Status",
-        "format": "",
-        "layout": "",
-        "className": "",
-        "style": false,
-        "font": "",
-        "fontSize": "",
-        "color": "#000000",
-        "x": 790,
-        "y": 180,
+        "format": "{{msg.payload.led}}",
+        "x": 360,
+        "y": 320,
         "wires": []
     },
     {
-        "id": "39e4615007023246",
+        "id": "e8f1a2b3.4c5d6",
         "type": "ui_text",
-        "z": "0e8ca933418e253a",
-        "group": "dashboard-group",
-        "width": "",
-        "height": "",
+        "z": "70fa28a94f45b4d3",
+        "group": "b2c3d4e5.6f7a8",
+        "order": 3,
+        "width": 6,
+        "height": 1,
         "name": "Timestamp",
         "label": "Timestamp",
-        "format": "",
-        "layout": "",
-        "className": "",
-        "style": false,
-        "font": "",
-        "fontSize": "",
-        "color": "#000000",
-        "x": 790,
-        "y": 220,
-        "wires": []
-    },
-    {
-        "id": "448128865bca99f5",
-        "type": "http in",
-        "z": "0e8ca933418e253a",
-        "name": "HTTP Dashboard Data",
-        "url": "/dashboard/data",
-        "method": "get",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 240,
-        "y": 340,
-        "wires": [
-            [
-                "15d9210bac411f39"
-            ]
-        ]
-    },
-    {
-        "id": "15d9210bac411f39",
-        "type": "function",
-        "z": "0e8ca933418e253a",
-        "name": "Retrieve Data",
-        "func": "const context = global.get('drowsy_data') || {};\nlet httpResponse = null;\nlet webSocketResponse = null;\n\nif (!context.driver_status) {\n    msg.payload = { error: true, message: \"No Data Available\" };\n} else {\n    msg.payload = context;\n}\n\n// If this is an HTTP request, create a response\nif (msg.req && msg.res) {\n    httpResponse = { ...msg };  // Clone msg to avoid modifying the original\n    httpResponse.res = msg.res;  // Ensure res object is present for HTTP response\n}\n\n// Always send data to WebSocket\nwebSocketResponse = { ...msg };\n\n// Return outputs: [HTTP Response, WebSocket Output, Debug Output]\nreturn [httpResponse, webSocketResponse, msg];",
-        "outputs": 1,
-        "timeout": "",
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 440,
-        "y": 340,
-        "wires": [
-            [
-                "22d9767c8cdf8a83",
-                "c9c572b041993e0a",
-                "c7b86efb66907085"
-            ]
-        ]
-    },
-    {
-        "id": "22d9767c8cdf8a83",
-        "type": "http response",
-        "z": "0e8ca933418e253a",
-        "name": "Send Dashboard Data",
-        "statusCode": "",
-        "headers": {},
-        "x": 640,
-        "y": 340,
-        "wires": []
-    },
-    {
-        "id": "c9c572b041993e0a",
-        "type": "websocket out",
-        "z": "0e8ca933418e253a",
-        "name": "WebSocket Dashboard",
-        "server": "f56a7c9d909a3776",
-        "client": "",
-        "x": 640,
-        "y": 400,
+        "format": "{{msg.payload.timestamp}}",
+        "x": 360,
+        "y": 380,
         "wires": []
     },
     {
@@ -238,21 +137,14 @@
         "sessionExpiry": ""
     },
     {
-        "id": "dashboard-group",
+        "id": "b2c3d4e5.6f7a8",
         "type": "ui_group",
-        "name": "Driver Drowsiness",
+        "name": "Driver Drowsiness Dashboard",
         "tab": "a1b2c3d4.5e6f7",
         "order": 1,
         "disp": true,
         "width": "6",
-        "collapse": false,
-        "className": ""
-    },
-    {
-        "id": "f56a7c9d909a3776",
-        "type": "websocket-listener",
-        "path": "/ws/dashboard",
-        "wholemsg": "false"
+        "collapse": false
     },
     {
         "id": "a1b2c3d4.5e6f7",
