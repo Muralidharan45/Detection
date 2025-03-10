@@ -1,0 +1,177 @@
+import os
+import cv2
+import numpy as np
+import mediapipe as mp
+import RPi.GPIO as GPIO
+import time
+import json
+import paho.mqtt.client as mqtt
+
+# Set Qt platform to avoid OpenCV errors on Raspberry Pi
+os.environ["QT_QPA_PLATFORM"] = "xcb"
+
+# Disable GPIO warnings
+GPIO.setwarnings(False)
+
+# Define GPIO pin for LED
+LED_PIN = 23
+
+# Setup GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(LED_PIN, GPIO.OUT)
+
+# Initialize Mediapipe face detection and face mesh
+mp_face_detection = mp.solutions.face_detection
+mp_face_mesh = mp.solutions.face_mesh
+
+face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.5)
+face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+
+# Initialize the camera
+cap = cv2.VideoCapture(0)
+
+# MQTT Broker Details
+MQTT_BROKER = "localhost"
+MQTT_PORT = 1883
+MQTT_TOPIC = "status"
+
+# Initialize MQTT Client
+mqtt_client = mqtt.Client()
+
+def connect_mqtt():
+    """Connect to the local MQTT broker."""
+    try:
+        mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        print("Connected to MQTT Broker!")
+    except Exception as e:
+        print(f"Failed to connect to MQTT Broker: {e}")
+
+def publish_status(status, led_state):
+    """Publish driver status and LED state to the MQTT topic."""
+    payload = {
+        "status": status,
+        "led": led_state,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    json_payload = json.dumps(payload)
+    print(f"Publishing: {json_payload}")
+    try:
+        mqtt_client.publish(MQTT_TOPIC, json_payload)
+    except Exception as e:
+        print(f"Failed to publish status: {e}")
+
+# Connect to MQTT Broker
+connect_mqtt()
+
+# State variables
+sleep = 0
+drowsy = 0
+active = 0
+status = ""
+color = (0, 0, 0)
+
+def led_on():
+    """Turn the LED on."""
+    GPIO.output(LED_PIN, GPIO.HIGH)
+    return "ON"
+
+def led_off():
+    """Turn the LED off."""
+    GPIO.output(LED_PIN, GPIO.LOW)
+    return "OFF"
+
+# Main loop with graceful exit
+try:
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            continue
+
+        # Convert frame to RGB for Mediapipe
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # Detect faces
+        results = face_detection.process(rgb_frame)
+
+        if results.detections:
+            for detection in results.detections:
+                bboxC = detection.location_data.relative_bounding_box
+                h, w, _ = frame.shape
+                x, y, w, h = int(bboxC.xmin * w), int(bboxC.ymin * h), int(bboxC.width * w), int(bboxC.height * h)
+
+                # Draw face bounding box
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+                # Process face landmarks
+                face_results = face_mesh.process(rgb_frame)
+                if face_results.multi_face_landmarks:
+                    for face_landmarks in face_results.multi_face_landmarks:
+                        landmarks = []
+                        for id, lm in enumerate(face_landmarks.landmark):
+                            x, y = int(lm.x * w), int(lm.y * h)
+                            landmarks.append((x, y))
+                            cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
+
+                        # Check Eye Aspect Ratio (EAR)
+                        left_eye = [landmarks[i] for i in [33, 160, 158, 153, 144, 133]]
+                        right_eye = [landmarks[i] for i in [362, 385, 387, 380, 373, 263]]
+
+                        def eye_aspect_ratio(eye):
+                            """Compute Eye Aspect Ratio (EAR)."""
+                            A = np.linalg.norm(np.array(eye[1]) - np.array(eye[5]))
+                            B = np.linalg.norm(np.array(eye[2]) - np.array(eye[4]))
+                            C = np.linalg.norm(np.array(eye[0]) - np.array(eye[3]))
+                            ear = (A + B) / (2.0 * C)
+                            return ear
+
+                        left_ear = eye_aspect_ratio(left_eye)
+                        right_ear = eye_aspect_ratio(right_eye)
+                        avg_ear = (left_ear + right_ear) / 2.0
+
+                        if avg_ear < 0.20:  # Eyes closed
+                            sleep += 1
+                            drowsy = 0
+                            active = 0
+                            if sleep > 6:
+                                status = "SLEEPING !!!"
+                                color = (0, 0, 255)
+                                led_state = led_on()
+                                publish_status(status, led_state)
+
+                        elif 0.20 <= avg_ear < 0.25:  # Drowsy
+                            sleep = 0
+                            active = 0
+                            drowsy += 1
+                            if drowsy > 6:
+                                status = "DROWSY !"
+                                color = (0, 0, 255)
+                                led_state = led_on()
+                                publish_status(status, led_state)
+
+                        else:  # Eyes open
+                            sleep = 0
+                            drowsy = 0
+                            active += 1
+                            if active > 6:
+                                status = "ACTIVE :)"
+                                color = (0, 255, 0)
+                                led_state = led_off()
+                                publish_status(status, led_state)
+
+                        cv2.putText(frame, status, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+
+        # Show the frame
+        cv2.imshow("Driver Drowsiness Detection", frame)
+
+        # Check for exit key (ESC)
+        if cv2.waitKey(1) == 27:
+            break
+
+except KeyboardInterrupt:
+    print("Program interrupted. Exiting...")
+
+finally:
+    cap.release()
+    cv2.destroyAllWindows()
+    GPIO.cleanup()
+    mqtt_client.disconnect()
