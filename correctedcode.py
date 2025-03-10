@@ -5,7 +5,7 @@ import dlib
 from imutils import face_utils
 import RPi.GPIO as GPIO
 import time
-import json  # Ensure json module is imported
+import json
 import paho.mqtt.client as mqtt
 
 # Set Qt platform to avoid errors when running OpenCV on Raspberry Pi
@@ -93,10 +93,23 @@ def led_off():
     GPIO.output(LED_PIN, GPIO.LOW)
     return "OFF"
 
+def rotate_image(image, angle):
+    """Rotate the image by the specified angle."""
+    (h, w) = image.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated = cv2.warpAffine(image, M, (w, h))
+    return rotated
+
 # Main loop with graceful exit
 try:
     while True:
         _, frame = cap.read()
+        
+        # Rotate the frame by a specified angle (e.g., 45 degrees)
+        angle = 45  # Change this value to the desired angle
+        frame = rotate_image(frame, angle)
+        
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = hog_face_detector(gray)
 
