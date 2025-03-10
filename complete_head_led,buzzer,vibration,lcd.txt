@@ -7,7 +7,6 @@ import RPi.GPIO as GPIO
 import time
 import json
 import paho.mqtt.client as mqtt
-from smbus2 import SMBus
 from RPLCD.i2c import CharLCD
 
 # Set Qt platform to avoid OpenCV errors
@@ -81,7 +80,7 @@ def blinked(a, b, c, d, e, f):
     up = compute(b, d) + compute(c, e)
     down = compute(a, f)
     ratio = up / (2.0 * down)
-    return 2 if ratio > 0.25 else 1 if 0.21 < ratio <= 0.25 else 0
+    return 2 if ratio > 0.3 else 1 if 0.2 < ratio <= 0.3 else 0
 
 def control_alerts(state):
     if state == "SLEEPING !!!" or state == "DROWSY !":
@@ -107,22 +106,25 @@ try:
             landmarks = predictor(gray, face)
             landmarks = face_utils.shape_to_np(landmarks)
 
-            # **Draw bounding box around face**
+            # Draw bounding box around face
             x, y, w, h = face.left(), face.top(), face.width(), face.height()
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-            # **Draw facial landmarks**
+            # Draw facial landmarks
             for (x, y) in landmarks:
                 cv2.circle(frame, (x, y), 1, (255, 0, 0), -1)
 
             left_blink = blinked(*landmarks[36:42])
             right_blink = blinked(*landmarks[42:48])
 
+            print(f"Left blink: {left_blink}, Right blink: {right_blink}")
+            print(f"Sleep: {sleep}, Drowsy: {drowsy}, Active: {active}")
+
             if left_blink == 0 or right_blink == 0:
                 sleep += 1
                 drowsy = 0
                 active = 0
-                if sleep > 5:  # Reduce the threshold for better response
+                if sleep > 3:  # Adjusted threshold
                     status = "SLEEPING !!!"
                     led_state, buzzer_state, vibration_state = control_alerts(status)
                     publish_status(status, led_state, buzzer_state, vibration_state)
@@ -131,7 +133,7 @@ try:
                 sleep = 0
                 active = 0
                 drowsy += 1
-                if drowsy > 5:  # Adjust threshold for drowsiness detection
+                if drowsy > 3:  # Adjusted threshold
                     status = "DROWSY !"
                     led_state, buzzer_state, vibration_state = control_alerts(status)
                     publish_status(status, led_state, buzzer_state, vibration_state)
@@ -140,7 +142,7 @@ try:
                 sleep = 0
                 drowsy = 0
                 active += 1
-                if active > 5:  # Ensure it detects active state only if truly awake
+                if active > 3:  # Adjusted threshold
                     status = "ACTIVE :)"
                     led_state, buzzer_state, vibration_state = control_alerts(status)
                     publish_status(status, led_state, buzzer_state, vibration_state)
