@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Drowsiness Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .status-container {
+            margin-bottom: 20px;
+        }
+        .status-label {
+            font-weight: bold;
+        }
+        .status-value {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Driver Drowsiness Dashboard</h1>
+    <div class="status-container">
+        <span class="status-label">Driver Status:</span>
+        <span class="status-value" id="driver-status">N/A</span>
+    </div>
+    <div class="status-container">
+        <span class="status-label">LED Status:</span>
+        <span class="status-value" id="led-status">N/A</span>
+    </div>
+    <div class="status-container">
+        <span class="status-label">Timestamp:</span>
+        <span class="status-value" id="timestamp">N/A</span>
+    </div>
+    <div class="status-container">
+        <span class="status-label">Buzzer Status:</span>
+        <span class="status-value" id="buzzer-status">N/A</span>
+    </div>
+    <div class="status-container">
+        <span class="status-label">Vibration Motor Status:</span>
+        <span class="status-value" id="vibration-status">N/A</span>
+    </div>
+
+    <script>
+        // Connect to the WebSocket server
+        const socket = new WebSocket('ws://localhost:1880/ws/driver-status');
+
+        socket.onopen = function(event) {
+            console.log('WebSocket connection established.');
+        };
+
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            console.log('Received data:', data);
+
+            // Update the UI with the received data
+            document.getElementById('driver-status').textContent = data.payload.status || 'N/A';
+            document.getElementById('led-status').textContent = data.payload.led || 'N/A';
+            document.getElementById('timestamp').textContent = data.payload.timestamp || 'N/A';
+            document.getElementById('buzzer-status').textContent = data.payload.buzzer || 'N/A';
+            document.getElementById('vibration-status').textContent = data.payload.vibration || 'N/A';
+        };
+
+        socket.onclose = function(event) {
+            console.log('WebSocket connection closed.');
+        };
+
+        socket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+    </script>
+</body>
+</html>
