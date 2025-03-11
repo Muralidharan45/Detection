@@ -1,0 +1,62 @@
+import RPi.GPIO as GPIO
+import time
+
+# Define GPIO Pins
+ADDR_A = 17
+ADDR_B = 27
+ADDR_C = 22
+START = 23
+EOC = 24
+OE = 25
+ALE = 8
+CLK = 18
+
+DATA_PINS = [5, 6, 13, 19, 26, 12, 16, 20]  # D0 to D7
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup([ADDR_A, ADDR_B, ADDR_C, START, OE, ALE, CLK], GPIO.OUT)
+GPIO.setup(EOC, GPIO.IN)
+GPIO.setup(DATA_PINS, GPIO.IN)
+
+def generate_clock():
+    GPIO.output(CLK, GPIO.HIGH)
+    time.sleep(0.0001)
+    GPIO.output(CLK, GPIO.LOW)
+    time.sleep(0.0001)
+
+def read_adc(channel):
+    # Select Channel
+    GPIO.output(ALE, GPIO.HIGH)
+    GPIO.output(ADDR_A, channel & 0x01)
+    GPIO.output(ADDR_B, (channel >> 1) & 0x01)
+    GPIO.output(ADDR_C, (channel >> 2) & 0x01)
+    GPIO.output(ALE, GPIO.LOW)
+    
+    # Start Conversion
+    GPIO.output(START, GPIO.HIGH)
+    generate_clock()
+    GPIO.output(START, GPIO.LOW)
+    
+    # Wait for End of Conversion
+    while GPIO.input(EOC) == GPIO.HIGH:
+        pass
+    
+    # Enable Output and Read Data
+    GPIO.output(OE, GPIO.HIGH)
+    value = 0
+    for i in range(8):
+        if GPIO.input(DATA_PINS[i]):
+            value |= (1 << i)
+    GPIO.output(OE, GPIO.LOW)
+    
+    return value
+
+try:
+    while True:
+        alcohol_level = read_adc(0)  # Read from Channel 0 (MQ3 Sensor)
+        print(f"Alcohol Level: {alcohol_level}")
+        time.sleep(1)
+
+except KeyboardInterrupt:
+    print("Exiting...")
+    GPIO.cleanup()
